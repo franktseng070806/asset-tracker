@@ -102,12 +102,7 @@ def show(user_id: str):
                 "損益_原幣": (price - float(h["avg_cost"])) * float(h["shares"]),
                 "損益%": (price / float(h["avg_cost"]) - 1) * 100 if float(h["avg_cost"]) > 0 else 0.0,
             })
-        if is_usd_only:
-            pie_data.append({"標的": "現金（USD）", "市值": cash})
-        else:
-            cash_twd = cash * usd_twd if acc["currency"] == "USD" else cash
-            if cash_twd > 0:
-                pie_data.append({"標的": f"現金（{acc['currency']}）", "市值": cash_twd})
+        
         if is_usd_only:
             pie_data.append({"標的": "現金（USD）", "市值": cash})
         else:
