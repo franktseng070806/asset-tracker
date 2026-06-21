@@ -102,7 +102,12 @@ def show(user_id: str):
                 "損益_原幣": (price - float(h["avg_cost"])) * float(h["shares"]),
                 "損益%": (price / float(h["avg_cost"]) - 1) * 100 if float(h["avg_cost"]) > 0 else 0.0,
             })
-
+        if is_usd_only:
+            pie_data.append({"標的": "現金（USD）", "市值": cash})
+        else:
+            cash_twd = cash * usd_twd if acc["currency"] == "USD" else cash
+            if cash_twd > 0:
+                pie_data.append({"標的": f"現金（{acc['currency']}）", "市值": cash_twd})
         if is_usd_only:
             pie_data.append({"標的": "現金（USD）", "市值": cash})
         else:
@@ -110,6 +115,18 @@ def show(user_id: str):
             if cash_twd > 0:
                 pie_data.append({"標的": f"現金（{acc['currency']}）", "市值": cash_twd})
 
+        if cash > 0:
+            holding_details.append({
+                "標的": f"現金（{acc['currency']}）",
+                "幣別": acc["currency"],
+                "股數": None,
+                "均價": None,
+                "現價": None,
+                "市值_原幣": cash,
+                "市值_twd": cash * usd_twd if acc["currency"] == "USD" else cash,
+                "損益_原幣": 0.0,
+                "損益%": 0.0,
+            })
         sub_total_usd = cash + stock_value if acc["currency"] == "USD" else (cash + stock_value) / usd_twd
         sub_total_twd = (cash + stock_value) * usd_twd if acc["currency"] == "USD" else cash + stock_value
         scoped_total_twd += sub_total_twd
@@ -170,21 +187,23 @@ def show(user_id: str):
             def render_holdings():
                 if holding_details:
                     detail_df = pd.DataFrame(holding_details)
-                    detail_df["股數"] = detail_df["股數"].apply(lambda x: f"{x:.0f}")
-                    detail_df["均價"] = detail_df["均價"].apply(lambda x: f"{x:.2f}")
-                    detail_df["現價"] = detail_df["現價"].apply(lambda x: f"{x:.2f}")
+                    detail_df["股數"] = detail_df["股數"].apply(lambda x: f"{x:.0f}" if pd.notna(x) else "-")
+                    detail_df["均價"] = detail_df["均價"].apply(lambda x: f"{x:.2f}" if pd.notna(x) else "-")
+                    detail_df["現價"] = detail_df["現價"].apply(lambda x: f"{x:.2f}" if pd.notna(x) else "-")
 
                     if is_usd_only:
                         detail_df["市值"] = detail_df["市值_原幣"].apply(lambda x: f"USD {float(x):,.2f}")
                         detail_df["損益"] = detail_df.apply(
-                            lambda r: f"USD {float(r['損益_原幣']):+,.2f}（{float(r['損益%']):+.1f}%）", axis=1
+                            lambda r: "-" if r["標的"].startswith("現金")
+                            else f"USD {float(r['損益_原幣']):+,.2f}（{float(r['損益%']):+.1f}%）", axis=1
                         )
                     else:
                         detail_df["市值"] = detail_df.apply(
                             lambda r: f"{'USD' if r['幣別']=='USD' else 'NT$'} {float(r['市值_原幣']):,.2f}", axis=1
                         )
                         detail_df["損益"] = detail_df.apply(
-                            lambda r: f"{'USD' if r['幣別']=='USD' else 'NT$'} {float(r['損益_原幣']):+,.2f}（{float(r['損益%']):+.1f}%）", axis=1
+                            lambda r: "-" if r["標的"].startswith("現金")
+                            else f"{'USD' if r['幣別']=='USD' else 'NT$'} {float(r['損益_原幣']):+,.2f}（{float(r['損益%']):+.1f}%）", axis=1
                         )
 
                     st.dataframe(
