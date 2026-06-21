@@ -182,6 +182,8 @@ def show(user_id: str):
             def render_holdings():
                 if holding_details:
                     detail_df = pd.DataFrame(holding_details)
+                    detail_df["_is_cash"] = detail_df["標的"].apply(lambda x: 0 if x.startswith("現金") else 1)
+                    detail_df = detail_df.sort_values("_is_cash").drop(columns=["_is_cash"]).reset_index(drop=True)
                     detail_df["股數"] = detail_df["股數"].apply(lambda x: f"{x:.0f}" if pd.notna(x) else "-")
                     detail_df["均價"] = detail_df["均價"].apply(lambda x: f"{x:.2f}" if pd.notna(x) else "-")
                     detail_df["現價"] = detail_df["現價"].apply(lambda x: f"{x:.2f}" if pd.notna(x) else "-")
