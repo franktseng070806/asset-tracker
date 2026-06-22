@@ -23,23 +23,37 @@ def get_price(ticker: str) -> float:
 
 @st.cache_data(ttl=300)
 def get_prices_batch(tickers: tuple) -> dict:
-    """一次性批次抓取多個股票價格，比逐一呼叫快很多"""
+    """一次性批次抓取多個股票價格，失敗時改用單支逐一補救"""
     if not tickers:
         return {}
+
+    prices = {}
     try:
         data = yf.download(list(tickers), period="1d", progress=False, group_by="ticker")
-        prices = {}
         for ticker in tickers:
             try:
                 if len(tickers) == 1:
-                    prices[ticker] = float(data["Close"].iloc[-1])
+                    val = float(data["Close"].iloc[-1])
                 else:
-                    prices[ticker] = float(data[ticker]["Close"].iloc[-1])
+                    val = float(data[ticker]["Close"].iloc[-1])
+                if val and val > 0:
+                    prices[ticker] = val
             except:
-                prices[ticker] = 0.0
-        return prices
+                pass
     except:
-        return {t: 0.0 for t in tickers}
+        pass
+
+    # 任何沒抓到的股票，逐一用單支方式重試
+    missing = [t for t in tickers if t not in prices or prices[t] == 0]
+    for ticker in missing:
+        try:
+            t = yf.Ticker(ticker)
+            val = t.fast_info["lastPrice"]
+            prices[ticker] = float(val) if val else 0.0
+        except:
+            prices[ticker] = 0.0
+
+    return prices
 
 
 def calc_total_net_worth_twd(user_id: str) -> float:
