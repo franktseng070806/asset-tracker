@@ -2,7 +2,7 @@ import streamlit as st
 from market import get_usd_twd
 from auth import show_login_page, is_logged_in, get_current_user_id, logout
 from pages import overview, accounts, stocks, cash, transfers
-from styles import apply_dark_theme
+
 
 # ── 頁面設定 ────────────────────────────────────────────────
 st.set_page_config(
@@ -11,7 +11,7 @@ st.set_page_config(
     layout="wide",
 )
 
-apply_dark_theme()
+
 
 # ── 檢查登入狀態 ────────────────────────────────────────────
 if not is_logged_in():
