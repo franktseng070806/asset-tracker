@@ -4,7 +4,7 @@ from datetime import date
 from database import (
     get_banks, get_cash_accounts, get_holdings,
     get_stock_transactions, add_stock_transaction,
-    update_account_balance, upsert_holding, delete_stock_transaction,
+    update_account_balance, buy_holding, sell_holding, delete_stock_transaction,
     save_snapshot,
 )
 from market import calc_total_net_worth_twd
@@ -63,7 +63,7 @@ def show(user_id: str):
                         )
                     else:
                         update_account_balance(account_id, -total_cost)
-                        upsert_holding(account_id, ticker.upper(), shares, price)
+                        buy_holding(account_id, ticker.upper(), shares, price)
                         add_stock_transaction(account_id, str(trade_date), action, ticker.upper(), price, shares, fee, note)
                         save_snapshot(user_id, calc_total_net_worth_twd(user_id))
                         st.success(
@@ -83,7 +83,7 @@ def show(user_id: str):
                         st.error(f"持股數量不足！目前持有 {current_shares:.0f} 股")
                     else:
                         update_account_balance(account_id, total_cost)
-                        upsert_holding(account_id, ticker.upper(), -shares, price)
+                        sell_holding(account_id, ticker.upper(),shares)
                         add_stock_transaction(account_id, str(trade_date), action, ticker.upper(), price, shares, fee, note)
                         save_snapshot(user_id, calc_total_net_worth_twd(user_id))
                         st.success(

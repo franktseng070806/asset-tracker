@@ -46,13 +46,46 @@ def get_holdings(account_id: int) -> pd.DataFrame:
     return pd.DataFrame(result.data) if result.data else pd.DataFrame(columns=["id", "account_id", "ticker", "shares", "avg_cost"])
 
 
-def upsert_holding(account_id: int, ticker: str, shares: float, avg_cost: float):
+def buy_holding(account_id: int, ticker: str, shares: float, price: float):
+    """買入：用加權平均法重新計算均價"""
     supabase = get_supabase()
     existing = supabase.table("stock_holdings").select("*").eq("account_id", account_id).eq("ticker", ticker).execute()
     if existing.data:
         old = existing.data[0]
-        new_shares = float(old["shares"]) + shares
-        new_avg = (float(old["shares"]) * float(old["avg_cost"]) + shares * avg_cost) / new_shares if new_shares > 0 else avg_cost
+        old_shares = float(old["shares"])
+        old_avg = float(old["avg_cost"])
+        new_shares = old_shares + shares
+        new_avg = (old_shares * old_avg + shares * price) / new_shares if new_shares > 0 else price
+        supabase.table("stock_holdings").update({"shares": new_shares, "avg_cost": new_avg}).eq("id", old["id"]).execute()
+    else:
+        supabase.table("stock_holdings").insert({
+            "account_id": account_id, "ticker": ticker, "shares": shares, "avg_cost": price
+        }).execute()
+
+
+def sell_holding(account_id: int, ticker: str, shares: float):
+    """賣出：均價不變，只減少股數"""
+    supabase = get_supabase()
+    existing = supabase.table("stock_holdings").select("*").eq("account_id", account_id).eq("ticker", ticker).execute()
+    if existing.data:
+        old = existing.data[0]
+        new_shares = float(old["shares"]) - shares
+        if new_shares <= 0:
+            supabase.table("stock_holdings").delete().eq("id", old["id"]).execute()
+        else:
+            supabase.table("stock_holdings").update({"shares": new_shares}).eq("id", old["id"]).execute()
+
+
+def upsert_holding(account_id: int, ticker: str, shares: float, avg_cost: float):
+    """保留給帳戶管理頁面的初始持股輸入使用（直接設定股數與均價）"""
+    supabase = get_supabase()
+    existing = supabase.table("stock_holdings").select("*").eq("account_id", account_id).eq("ticker", ticker).execute()
+    if existing.data:
+        old = existing.data[0]
+        old_shares = float(old["shares"])
+        old_avg = float(old["avg_cost"])
+        new_shares = old_shares + shares
+        new_avg = (old_shares * old_avg + shares * avg_cost) / new_shares if new_shares > 0 else avg_cost
         supabase.table("stock_holdings").update({"shares": new_shares, "avg_cost": new_avg}).eq("id", old["id"]).execute()
     else:
         supabase.table("stock_holdings").insert({
